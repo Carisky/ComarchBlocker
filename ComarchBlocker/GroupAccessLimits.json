@@ -1,0 +1,52 @@
+[
+  {
+    "GroupCode": "AC",
+    "Hour": 7,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "AC",
+    "Hour": 8,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "AC",
+    "Hour": 9,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "ACH",
+    "Hour": 7,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "ACH",
+    "Hour": 8,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "ACH",
+    "Hour": 9,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "OML",
+    "Hour": 13,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "OML",
+    "Hour": 14,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "OML",
+    "Hour": 15,
+    "MaxUsers": 1
+  },
+  {
+    "GroupCode": "ITT",
+    "Hour": 15,
+    "MaxUsers": 0
+  }
+]
