@@ -1,11 +1,11 @@
 ﻿
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using static TSL.Data.Models.ERPXL_TSL.Sesje;
+using TSL.Data.Models.ERPXL_TSL;
 namespace ComarchBlocker
 {
     internal class Program
@@ -30,31 +30,23 @@ namespace ComarchBlocker
             foreach (var kv in groupLimits)
                 Console.WriteLine($"  Группа: {kv.Key.Group}, Час: {kv.Key.Hour} → Лимит: {kv.Value}");
 
-            using (var conn = new SqlConnection(connStr))
-            {
-                conn.Open();
+            var options = new DbContextOptionsBuilder<ERPXL_TSLContext>()
+                .UseSqlServer(connStr)
+                .Options;
 
+            using (var context = new ERPXL_TSLContext(options))
+            {
                 var now = DateTime.Now;
                 var currentHour = now.Hour;
 
-                var cmdText = @"
-            SELECT s.SES_ADOSPID, s.SES_OpeIdent, s.SES_Start
-            FROM CDN.Sesje s
-            WHERE s.SES_Stop = 0 AND s.SES_ADOSPID IS NOT NULL";
-
-                var sessions = new List<(int Spid, string UserName, long Start)>();
-                using (var cmd = new SqlCommand(cmdText, conn))
-                using (var reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        sessions.Add((
-                            Convert.ToInt32(reader[0]),
-                            reader.GetString(1),
-                            Convert.ToInt64(reader[2])
-                        ));
-                    }
-                }
+                var sessions = context.Sesjes
+                    .Where(s => s.SesStop == 0 && s.SesAdospid != null)
+                    .Select(s => (
+                        Spid: (int)s.SesAdospid.Value,
+                        UserName: s.SesOpeIdent,
+                        Start: (long)(s.SesStart ?? 0)
+                    ))
+                    .ToList();
 
                 Console.WriteLine($"\nНайдено {sessions.Count} активных сессий.");
 
@@ -90,7 +82,7 @@ namespace ComarchBlocker
                     foreach (var s in toKill)
                     {
                         Console.WriteLine($"    - Пользователь: {s.UserName}, SPID: {s.Spid}, Start: {s.Start}");
-                        KillSession(s.Spid, s.UserName, conn, "Превышен лимит");
+                        KillSession(s.Spid, s.UserName, context, "Превышен лимит");
                     }
                 }
             }
@@ -113,20 +105,17 @@ namespace ComarchBlocker
             return list.ToDictionary(x => (x.GroupCode, x.Hour), x => x.MaxUsers);
         }
 
-        static void KillSession(int spid, string user, SqlConnection conn, string reason)
+        static void KillSession(int spid, string user, ERPXL_TSLContext context, string reason)
         {
-            using (var cmd = new SqlCommand($"KILL {spid}", conn))
+            try
             {
-                try
-                {
-                    cmd.ExecuteNonQuery();
-                    LogKill(user, spid, reason);
-                    Console.WriteLine($"KILL {spid} ({reason})");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Ошибка KILL {spid}: {ex.Message}");
-                }
+                context.Database.ExecuteSqlRaw($"KILL {spid}");
+                LogKill(user, spid, reason);
+                Console.WriteLine($"KILL {spid} ({reason})");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка KILL {spid}: {ex.Message}");
             }
         }
 
